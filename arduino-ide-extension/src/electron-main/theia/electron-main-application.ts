@@ -272,6 +272,7 @@ export class ElectronMainApplication extends TheiaElectronMainApplication {
       }
     });
     this.attachClosedWorkspace(electronWindow);
+    this.attachCloseListeners(electronWindow, options);
     this.attachReadyToShow(electronWindow);
     this.attachSaveWindowState(electronWindow);
     this.attachGlobalShortcuts(electronWindow);

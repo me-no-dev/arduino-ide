@@ -20,6 +20,7 @@ import {
   FrontendApplication,
   FrontendApplicationContribution,
   LocalStorageService,
+  OnWillStopAction,
   StatusBar,
   StatusBarAlignment,
 } from '@theia/core/lib/browser';
@@ -70,6 +71,7 @@ import { SaveAsSketch } from './contributions/save-as-sketch';
 import { SketchbookWidgetContribution } from './widgets/sketchbook/sketchbook-widget-contribution';
 import { IDEUpdaterDialog } from './dialogs/ide-updater/ide-updater-dialog';
 import { IDEUpdater } from '../common/protocol/ide-updater';
+import { TempSketchDialog } from './dialogs/temp-sketch-dialog';
 
 const INIT_LIBS_AND_PACKAGES = 'initializedLibsAndPackages';
 export const SKIP_IDE_VERSION = 'skipIDEVersion';
@@ -546,6 +548,37 @@ export class ArduinoFrontendContribution
     );
     if (!widget || forceOpen) {
       return this.editorManager.open(new URI(uri), options);
+    }
+  }
+
+  onWillStop(): OnWillStopAction {
+    return {
+      reason: 'Temp Sketch',
+      action: async () => {
+        const sketch = await this.sketchServiceClient.currentSketch();
+        if (!sketch) {
+          return true;
+        }
+        const isTemp = await this.sketchService.isTemp(sketch);
+        if (!isTemp) {
+          return true;
+        }
+        const dialog = new TempSketchDialog();
+        const result = await dialog.open();
+        if (result === "Don't Save") {
+          return true;
+        } else if (result === 'Save As...') {
+          return !!(await this.commandRegistry.executeCommand(
+            SaveAsSketch.Commands.SAVE_AS_SKETCH.id,
+            {
+              execOnlyIfTemp: false,
+              openAfterMove: false,
+              wipeOriginal: true,
+            }
+          ));
+        }
+        return false;
+      }
     }
   }
 
