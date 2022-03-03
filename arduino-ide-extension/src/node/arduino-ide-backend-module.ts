@@ -84,6 +84,9 @@ import { ArduinoFirmwareUploaderImpl } from './arduino-firmware-uploader-impl';
 import { PlotterBackendContribution } from './plotter/plotter-backend-contribution';
 import WebSocketServiceImpl from './web-socket/web-socket-service-impl';
 import { WebSocketService } from './web-socket/web-socket-service';
+import { MonitorManagerProxyImpl } from './monitor-manager-proxy-impl';
+import { MonitorManager } from './monitor-manager';
+import { MonitorManagerProxy, MonitorManagerProxyClient, MonitorManagerProxyPath } from '../common/monitor-manager-proxy';
 
 export default new ContainerModule((bind, unbind, isBound, rebind) => {
   bind(BackendApplication).toSelf().inSingletonScope();
