@@ -84,7 +84,7 @@ import { ArduinoFirmwareUploaderImpl } from './arduino-firmware-uploader-impl';
 import { PlotterBackendContribution } from './plotter/plotter-backend-contribution';
 import { MonitorManagerProxyImpl } from './monitor-manager-proxy-impl';
 import { MonitorManager } from './monitor-manager';
-import { MonitorManagerProxy, MonitorManagerProxyClient, MonitorManagerProxyPath } from '../common/monitor-manager-proxy';
+import { MonitorManagerProxy, MonitorManagerProxyClient, MonitorManagerProxyPath } from '../common/protocol/monitor-service';
 
 export default new ContainerModule((bind, unbind, isBound, rebind) => {
   bind(BackendApplication).toSelf().inSingletonScope();
