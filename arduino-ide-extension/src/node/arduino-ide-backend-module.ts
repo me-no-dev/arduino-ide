@@ -82,8 +82,9 @@ import {
 import { ArduinoFirmwareUploaderImpl } from './arduino-firmware-uploader-impl';
 import { PlotterBackendContribution } from './plotter/plotter-backend-contribution';
 import { MonitorManagerProxyImpl } from './monitor-manager-proxy-impl';
-import { MonitorManager } from './monitor-manager';
+import { MonitorManager, MonitorManagerName } from './monitor-manager';
 import { MonitorManagerProxy, MonitorManagerProxyClient, MonitorManagerProxyPath } from '../common/protocol/monitor-service';
+import { MonitorServiceName } from './monitor-service';
 
 export default new ContainerModule((bind, unbind, isBound, rebind) => {
   bind(BackendApplication).toSelf().inSingletonScope();
@@ -299,6 +300,23 @@ export default new ContainerModule((bind, unbind, isBound, rebind) => {
     })
     .inSingletonScope()
     .whenTargetNamed('config');
+
+  // Logger for the monitor manager and its services
+  bind(ILogger)
+    .toDynamicValue((ctx) => {
+      const parentLogger = ctx.container.get<ILogger>(ILogger);
+      return parentLogger.child(MonitorManagerName);
+    })
+    .inSingletonScope()
+    .whenTargetNamed(MonitorManagerName);
+
+  bind(ILogger)
+    .toDynamicValue((ctx) => {
+      const parentLogger = ctx.container.get<ILogger>(ILogger);
+      return parentLogger.child(MonitorServiceName);
+    })
+    .inSingletonScope()
+    .whenTargetNamed(MonitorServiceName);
 
   bind(DefaultGitInit).toSelf();
   rebind(GitInit).toService(DefaultGitInit);
