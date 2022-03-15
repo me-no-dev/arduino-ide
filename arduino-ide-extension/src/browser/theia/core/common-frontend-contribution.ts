@@ -5,6 +5,10 @@ import {
   CommonCommands,
 } from '@theia/core/lib/browser/common-frontend-contribution';
 import { CommandRegistry } from '@theia/core/lib/common/command';
+import { OnWillStopAction } from '@theia/core/lib/browser/frontend-application';
+import * as remote from '@theia/core/electron-shared/@electron/remote';
+import { nls } from '@theia/core/lib/common/nls';
+import { Dialog } from '@theia/core/lib/browser';
 
 @injectable()
 export class CommonFrontendContribution extends TheiaCommonFrontendContribution {
@@ -39,6 +43,29 @@ export class CommonFrontendContribution extends TheiaCommonFrontendContribution 
       CommonCommands.SAVE_WITHOUT_FORMATTING, // Patched for https://github.com/eclipse-theia/theia/pull/8877
     ]) {
       registry.unregisterMenuAction(command);
+    }
+  }
+
+  onWillStop(): OnWillStopAction | undefined {
+    try {
+      if (this.shouldPreventClose || this.shell.canSaveAll()) {
+        return {
+          reason: 'Dirty editors present',
+          action: async () => {
+            const result = await remote.dialog.showMessageBox(remote.getCurrentWindow(), {
+              title: nls.localize('theia/core/quitTitle', 'Are you sure you want to quit?'),
+              message: nls.localize('theia/core/quitMessage', 'Any unsaved changes will not be saved.'),
+              buttons: [
+                Dialog.NO,
+                Dialog.YES
+              ]
+            });
+            return result.response === 1;
+          }
+        };
+      }
+    } finally {
+      this.shouldPreventClose = false;
     }
   }
 }

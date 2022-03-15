@@ -17,6 +17,7 @@ import {
   DisposableCollection,
 } from '@theia/core';
 import {
+  Dialog,
   FrontendApplication,
   FrontendApplicationContribution,
   LocalStorageService,
@@ -71,7 +72,6 @@ import { SaveAsSketch } from './contributions/save-as-sketch';
 import { SketchbookWidgetContribution } from './widgets/sketchbook/sketchbook-widget-contribution';
 import { IDEUpdaterDialog } from './dialogs/ide-updater/ide-updater-dialog';
 import { IDEUpdater } from '../common/protocol/ide-updater';
-import { TempSketchDialog } from './dialogs/temp-sketch-dialog';
 
 const INIT_LIBS_AND_PACKAGES = 'initializedLibsAndPackages';
 export const SKIP_IDE_VERSION = 'skipIDEVersion';
@@ -563,11 +563,23 @@ export class ArduinoFrontendContribution
         if (!isTemp) {
           return true;
         }
-        const dialog = new TempSketchDialog();
-        const result = await dialog.open();
-        if (result === "Don't Save") {
+        const messageBoxResult = await remote.dialog.showMessageBox(
+          remote.getCurrentWindow(),
+          {
+            message: nls.localize('arduino/sketch/saveTempSketch', 'Save your sketch to open it again later.'),
+            title: 'Arduino-IDE',
+            type: 'question',
+            buttons: [
+              Dialog.CANCEL,
+              nls.localizeByDefault('Save As...'),
+              nls.localizeByDefault("Don't Save"),
+            ],
+          }
+        )
+        const result = messageBoxResult.response;
+        if (result === 2) {
           return true;
-        } else if (result === 'Save As...') {
+        } else if (result === 1) {
           return !!(await this.commandRegistry.executeCommand(
             SaveAsSketch.Commands.SAVE_AS_SKETCH.id,
             {
