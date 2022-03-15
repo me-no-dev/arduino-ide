@@ -13,7 +13,6 @@ import {
   Widget,
 } from '@theia/core/lib/browser';
 import { Sketch } from '../../../common/protocol';
-import { SaveAsSketch } from '../../contributions/save-as-sketch';
 import { SketchesServiceClientImpl } from '../../../common/protocol/sketches-service-client-impl';
 import { nls } from '@theia/core/lib/common';
 
@@ -94,10 +93,5 @@ export class ApplicationShell extends TheiaApplicationShell {
       return; // Theia does not reject on failed save: https://github.com/eclipse-theia/theia/pull/8803
     }
     await super.saveAll();
-    const options = { execOnlyIfTemp: true, openAfterMove: true };
-    await this.commandService.executeCommand(
-      SaveAsSketch.Commands.SAVE_AS_SKETCH.id,
-      options
-    );
   }
 }

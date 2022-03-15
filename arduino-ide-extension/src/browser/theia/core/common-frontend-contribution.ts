@@ -1,4 +1,4 @@
-import { injectable } from 'inversify';
+import { inject, injectable } from 'inversify';
 import { MenuModelRegistry } from '@theia/core/lib/common/menu';
 import {
   CommonFrontendContribution as TheiaCommonFrontendContribution,
@@ -9,9 +9,19 @@ import { OnWillStopAction } from '@theia/core/lib/browser/frontend-application';
 import * as remote from '@theia/core/electron-shared/@electron/remote';
 import { nls } from '@theia/core/lib/common/nls';
 import { Dialog } from '@theia/core/lib/browser';
+import { SaveAsSketch } from '../../contributions/save-as-sketch';
+import { SketchesServiceClientImpl } from '../../../common/protocol/sketches-service-client-impl';
+import { SketchesService } from '../../../common/protocol';
 
 @injectable()
 export class CommonFrontendContribution extends TheiaCommonFrontendContribution {
+
+  @inject(SketchesServiceClientImpl)
+  protected readonly sketchServiceClient: SketchesServiceClientImpl;
+
+  @inject(SketchesService)
+  protected readonly sketchService: SketchesService;
+
   registerCommands(commandRegistry: CommandRegistry): void {
     super.registerCommands(commandRegistry);
 
@@ -47,11 +57,15 @@ export class CommonFrontendContribution extends TheiaCommonFrontendContribution 
   }
 
   onWillStop(): OnWillStopAction | undefined {
-    try {
-      if (this.shouldPreventClose || this.shell.canSaveAll()) {
-        return {
-          reason: 'Dirty editors present',
-          action: async () => {
+    return {
+      reason: 'Dirty editors present',
+      action: async () => {
+        const sketch = await this.sketchServiceClient.currentSketch();
+        if (sketch) {
+          const isTemp = await this.sketchService.isTemp(sketch);
+          if (isTemp) {
+            return this.showTempSketchDialog();
+          } else if (this.shell.canSaveAll()) {
             const result = await remote.dialog.showMessageBox(remote.getCurrentWindow(), {
               title: nls.localize('theia/core/quitTitle', 'Are you sure you want to quit?'),
               message: nls.localize('theia/core/quitMessage', 'Any unsaved changes will not be saved.'),
@@ -62,10 +76,47 @@ export class CommonFrontendContribution extends TheiaCommonFrontendContribution 
             });
             return result.response === 1;
           }
-        };
+        }
+        return true;
       }
-    } finally {
-      this.shouldPreventClose = false;
+    };
+  }
+
+  private async showTempSketchDialog(): Promise<boolean> {
+    const sketch = await this.sketchServiceClient.currentSketch();
+    if (!sketch) {
+      return true;
     }
+    const isTemp = await this.sketchService.isTemp(sketch);
+    if (!isTemp) {
+      return true;
+    }
+    const messageBoxResult = await remote.dialog.showMessageBox(
+      remote.getCurrentWindow(),
+      {
+        message: nls.localize('arduino/sketch/saveTempSketch', 'Save your sketch to open it again later.'),
+        title: 'Arduino-IDE',
+        type: 'question',
+        buttons: [
+          Dialog.CANCEL,
+          nls.localizeByDefault('Save As...'),
+          nls.localizeByDefault("Don't Save"),
+        ],
+      }
+    )
+    const result = messageBoxResult.response;
+    if (result === 2) {
+      return true;
+    } else if (result === 1) {
+      return !!(await this.commandRegistry.executeCommand(
+        SaveAsSketch.Commands.SAVE_AS_SKETCH.id,
+        {
+          execOnlyIfTemp: false,
+          openAfterMove: false,
+          wipeOriginal: true
+        }
+      ));
+    }
+    return false
   }
 }

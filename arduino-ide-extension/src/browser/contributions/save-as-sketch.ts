@@ -1,4 +1,4 @@
-import { injectable } from 'inversify';
+import { inject, injectable } from 'inversify';
 import * as remote from '@theia/core/electron-shared/@electron/remote';
 import * as dateFormat from 'dateformat';
 import { ArduinoMenus } from '../menu/arduino-menus';
@@ -11,9 +11,19 @@ import {
   KeybindingRegistry,
 } from './contribution';
 import { nls } from '@theia/core/lib/common';
+import { ApplicationShell } from '@theia/core/lib/browser';
+import { WindowService } from '@theia/core/lib/browser/window/window-service';
+import { timeout } from '@theia/core/lib/common/promise-util';
 
 @injectable()
 export class SaveAsSketch extends SketchContribution {
+
+  @inject(ApplicationShell)
+  private readonly appShell: ApplicationShell;
+
+  @inject(WindowService)
+  private readonly windowService: WindowService;
+
   registerCommands(registry: CommandRegistry): void {
     registry.registerCommand(SaveAsSketch.Commands.SAVE_AS_SKETCH, {
       execute: (args) => this.saveAs(args),
@@ -87,6 +97,8 @@ export class SaveAsSketch extends SketchContribution {
     if (!destinationUri) {
       return false;
     }
+    await this.appShell.saveAll();
+    await timeout(20);
     const workspaceUri = await this.sketchService.copy(sketch, {
       destinationUri,
     });
@@ -100,6 +112,7 @@ export class SaveAsSketch extends SketchContribution {
           /* NOOP: from time to time, it's not possible to wipe the old resource from the temp dir on Windows */
         }
       }
+      this.windowService.setSafeToShutDown();
       this.workspaceService.open(new URI(workspaceUri), {
         preserveWindow: true,
       });
